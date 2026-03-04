@@ -22,18 +22,15 @@ app.post('/api/sync-data', async (req, res) => {
 setInterval(async () => {
   try {
     const result = await syncHomeAssistantToInflux();
-    console.log(`[${new Date().toLocaleTimeString('vi-VN')}] ✅`, result);
+    console.log(`[${new Date().toLocaleTimeString('vi-VN')}] `, result);
   } catch (err) {
-    console.error(`[${new Date().toLocaleTimeString('vi-VN')}] ❌ Sync error:`, err.message);
+    console.error(`[${new Date().toLocaleTimeString('vi-VN')}] Sync error:`, err.message);
   }
-}, 30000); // 30 seconds
+}, 30000); 
 
-// ================================
-// Start Server
-// ================================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Backend running at http://localhost:${PORT}`);
-  console.log(`📊 API: POST http://localhost:${PORT}/api/sync-data`);
-  console.log(`⏰ Auto-sync: Every 30 seconds`);
+  console.log(`Backend running at http://localhost:${PORT}`);
+  console.log(`API: POST http://localhost:${PORT}/api/sync-data`);
+  console.log(`Auto-sync: Every 30 seconds`);
 });

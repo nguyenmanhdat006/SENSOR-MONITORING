@@ -13,12 +13,13 @@ const allowKeywords = [
   'temperature',
   'humidity',
   'battery',
-  'carbon_dioxide'
+  'carbon_dioxide',
+  'illuminance'
 ];
 
 
 const alertCache = new Map();
-const ALERT_COOLDOWN = 30 * 60 * 1000; // 30 phút
+const ALERT_COOLDOWN = 30 * 60 * 1000; 
 
 function shouldSendAlert(entityId) {
   const lastAlert = alertCache.get(entityId);
@@ -29,6 +30,22 @@ function shouldSendAlert(entityId) {
     return true;
   }
   return false;
+}
+
+async function sendNoDataAlert(reason) {
+  const noDataAlertKey = 'system:no_data';
+  if (!shouldSendAlert(noDataAlertKey)) return false;
+
+  const subject = '🚨 Alert: Server has no sensor data';
+  const message = `
+    <h2>🚨 Alert from Monitoring System</h2>
+    <p><strong>Time:</strong> ${new Date().toLocaleString('en-US')}</p>
+    <p><strong>Status:</strong> No sensor data received from Home Assistant.</p>
+    <p><strong>Details:</strong> ${reason}</p>
+    <p style="margin-top: 20px; color: #666;"><em>Please check the server connection and device status.</em></p>
+  `;
+
+  return sendAlert(subject, message);
 }
 
 function checkAlertRules(item, value) {
@@ -60,6 +77,12 @@ async function syncHomeAssistantToInflux() {
   });
 
   const data = response.data;
+
+  if (!Array.isArray(data) || data.length === 0) {
+    await sendNoDataAlert('API /api/states trả về rỗng hoặc không hợp lệ.');
+    return 'Không có dữ liệu từ Home Assistant.';
+  }
+
   let count = 0;
   const allAlerts = [];
 
@@ -84,7 +107,6 @@ async function syncHomeAssistantToInflux() {
     writeApi.writePoint(point);
     count++;
 
-    // 🚨 Kiểm tra cảnh báo
     const alerts = checkAlertRules(item, value);
     if (alerts.length > 0 && shouldSendAlert(item.entity_id)) {
       allAlerts.push(...alerts);
@@ -93,7 +115,10 @@ async function syncHomeAssistantToInflux() {
 
   await writeApi.close();
 
-  // 📧 Gửi email nếu có cảnh báo
+  if (count === 0) {
+    await sendNoDataAlert('Có dữ liệu trả về nhưng không có sensor hợp lệ để ghi InfluxDB.');
+  }
+
   if (allAlerts.length > 0) {
     const subject = `Notification ${allAlerts.length} something exceeded threshold`;
     const message = formatAlertMessage(allAlerts);
