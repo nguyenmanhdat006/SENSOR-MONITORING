@@ -30,3 +30,5 @@ const alertRules = [
 ];
 
 module.exports = { alertRules };
+
+module.exports = { alertRules };
