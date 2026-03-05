@@ -4,8 +4,7 @@ const cors = require('cors');
 const { syncHomeAssistantToInflux } = require('./service/haSyncService');
 
 const { sendAlert, formatAlertMessage } = require('./service/emailService');
-const { alertRules } = require('./config/alertRule');
-
+const { getConfig, saveConfig, getAlertRules } = require('./config/configManager');
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -17,14 +16,17 @@ app.post('/api/demo-anomaly', async (req, res) => {
   }
 
   const alerts = [];
+  const alertRules = getAlertRules();
+  const config = getConfig();
+  
   for (const rule of alertRules) {
     const value = sensorData[rule.keyword];
     if (value !== undefined && rule.condition(value)) {
       alerts.push({
-        sensor: rule.keyword,
+        name: rule.keyword,
         value,
         threshold: rule.threshold,
-        status: rule.message
+        unit: rule.unit
       });
     }
   }
@@ -32,13 +34,35 @@ app.post('/api/demo-anomaly', async (req, res) => {
   if (alerts.length > 0) {
     const subject = 'Sensor Anomaly Alert';
     const html = formatAlertMessage(alerts);
-    const toEmail = userEmail || process.env.ALERT_EMAIL;
+    const toEmail = userEmail || config.email || process.env.ALERT_EMAIL;
     await sendAlert(subject, html, toEmail);
     return res.json({ success: true, alerts });
   }
   return res.json({ success: true, alerts: [] });
 });
 
+
+app.get('/api/settings', (req, res) => {
+  const config = getConfig();
+  res.json({ success: true, data: config });
+});
+
+app.post('/api/settings', (req, res) => {
+  const { email, rules } = req.body;
+  
+  const currentConfig = getConfig();
+  const newConfig = {
+    email: email || currentConfig.email,
+    rules: { ...currentConfig.rules, ...(rules || {}) }
+  };
+  
+  const saved = saveConfig(newConfig);
+  if (saved) {
+    res.json({ success: true, message: 'Settings saved successfully', data: newConfig });
+  } else {
+    res.status(500).json({ success: false, error: 'Failed to save settings' });
+  }
+});
 
 app.post('/api/sync-data', async (req, res) => {
   try {

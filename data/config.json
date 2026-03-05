@@ -1,0 +1,9 @@
+{
+  "email": "admin@example.com",
+  "rules": {
+    "temperature": 39,
+    "power": 500,
+    "carbon_dioxide": 1000,
+    "electric_consumption": 500
+  }
+}

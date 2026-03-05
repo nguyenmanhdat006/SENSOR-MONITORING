@@ -2,8 +2,7 @@ const axios = require('axios');
 const { Point } = require('@influxdata/influxdb-client');
 const { client, org, bucket } = require('../config/influx');
 const { sendAlert, formatAlertMessage } = require('./emailService');
-const { alertRules } = require('../config/alertRule');
-
+const { getConfig, getAlertRules } = require('../config/configManager');
 const HA_URL = process.env.HA_URL;
 const HA_TOKEN = process.env.HA_TOKEN;
 
@@ -45,11 +44,14 @@ async function sendNoDataAlert(reason) {
     <p style="margin-top: 20px; color: #666;"><em>Please check the server connection and device status.</em></p>
   `;
 
-  return sendAlert(subject, message);
+  const config = getConfig();
+  const toEmail = config.email || process.env.ALERT_EMAIL;
+  return sendAlert(subject, message, toEmail);
 }
 
 function checkAlertRules(item, value) {
   const alerts = [];
+  const alertRules = getAlertRules();
   
   for (const rule of alertRules) {
     if (item.entity_id.includes(rule.keyword) && rule.condition(value)) {
@@ -122,7 +124,9 @@ async function syncHomeAssistantToInflux() {
   if (allAlerts.length > 0) {
     const subject = `Notification ${allAlerts.length} something exceeded threshold`;
     const message = formatAlertMessage(allAlerts);
-    await sendAlert(subject, message);
+    const config = getConfig();
+    const toEmail = config.email || process.env.ALERT_EMAIL;
+    await sendAlert(subject, message, toEmail);
   }
 
   return `Đã ghi ${count} records vào InfluxDB. Cảnh báo: ${allAlerts.length}`;
