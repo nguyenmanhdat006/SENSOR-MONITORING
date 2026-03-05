@@ -8,17 +8,17 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-async function sendAlert(subject, message) {
+async function sendAlert(subject, message, toEmail) {
   const mailOptions = {
     from: process.env.GMAIL_USER,
-    to: process.env.ALERT_EMAIL,
+    to: toEmail || process.env.ALERT_EMAIL,
     subject: subject,
     html: message
   };
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`Email sent: ${subject}`);
+    console.log(`Email sent: ${subject} to ${mailOptions.to}`);
     return true;
   } catch (error) {
     console.error('Email error:', error);
