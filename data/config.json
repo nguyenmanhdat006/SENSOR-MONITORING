@@ -1,7 +1,7 @@
 {
-  "email": "admin@example.com",
+  "email": "pxc0205@gmail.com",
   "rules": {
-    "temperature": 39,
+    "temperature": 10,
     "power": 500,
     "carbon_dioxide": 1000,
     "electric_consumption": 500
